@@ -345,41 +345,18 @@
   // RANKING_DATA:START — este bloco é substituído automaticamente a cada
   // atualização (não editar a formatação, só os valores dentro do objeto).
   var state = {
-    "updatedAt": "2026-09-10T15:00:13.712Z",
-    "period": "Setembro/2026 · mês inteiro",
-    "sdr": [
-        {
-            "nome": "Raissa Borges",
-            "agendamentos": 12,
-            "show": 5
-        },
-        {
-            "nome": "Guilherme Sousa",
-            "agendamentos": 6,
-            "show": 4
-        }
+    updatedAt: "2026-09-10T12:00:12.147Z",
+    period: "Setembro/2026 · mês inteiro",
+    sdr: [
+      {nome:"Raissa Borges", agendamentos:12, show:5},
+      {nome:"Guilherme Sousa", agendamentos:6, show:4}
     ],
-    "closer": [
-        {
-            "nome": "Sarah Limas",
-            "show": 7,
-            "vendaValor": 32000,
-            "vendaQtd": 2
-        },
-        {
-            "nome": "Geovane Paschoal",
-            "show": 3,
-            "vendaValor": 0,
-            "vendaQtd": 0
-        },
-        {
-            "nome": "Cristine Rocha",
-            "show": 1,
-            "vendaValor": 0,
-            "vendaQtd": 0
-        }
+    closer: [
+      {nome:"Sarah Limas", show:7, vendaValor:32000, vendaQtd:2},
+      {nome:"Geovane Paschoal", show:3, vendaValor:0, vendaQtd:0},
+      {nome:"Cristine Rocha", show:1, vendaValor:0, vendaQtd:0}
     ]
-};
+  };
   // RANKING_DATA:END
   var prevState = null;
 
@@ -463,6 +440,14 @@
 
   renderAll();
   setInterval(function(){ document.getElementById('updatedAt').textContent = fmtUpdated(state.updatedAt); }, 30000);
+
+  // Página estática: o GitHub Actions publica um novo index.html a cada
+  // hora, mas uma aba já aberta (como na TV) não percebe isso sozinha.
+  // Por isso recarregamos a própria página periodicamente, com um parâmetro
+  // que muda a cada vez para evitar qualquer cache antigo.
+  setTimeout(function(){
+    location.href = location.pathname + '?r=' + Date.now();
+  }, 15 * 60 * 1000); // 15 minutos
 })();
 </script>
 </body>
