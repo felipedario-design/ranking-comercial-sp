@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Placar Comercial São Paulo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0f1a;
+    --bg-grad:#0d1526;
+    --surface:#121b2e;
+    --surface-2:#182338;
+    --row-alt:#0f1728;
+    --border:#25314a;
+    --text:#eef1f8;
+    --text-dim:#8a97b3;
+    --text-faint:#5c6884;
+    --gold:#f2b84b;
+    --silver:#c8d1e0;
+    --bronze:#d9895a;
+    --teal:#39d6b4;
+    --teal-dim:#0f3d38;
+    --violet:#9c8bfb;
+    --violet-dim:#251f4a;
+    --live:#39d68a;
+    --font-display:'Oswald',ui-sans-serif,system-ui,sans-serif;
+    --font-body:'Manrope',ui-sans-serif,system-ui,sans-serif;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 700px at 15% -10%, #16213a 0%, transparent 60%),
+      radial-gradient(1000px 600px at 100% 0%, #17233c 0%, transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--font-body);
+    min-height:100vh;
+    padding:20px 16px 40px;
+  }
+
+  .wrap{
+    max-width:1240px;
+    margin:0 auto;
+    display:flex;
+    flex-direction:column;
+    gap:22px;
+  }
+
+  /* ---------- header ---------- */
+  .topbar{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+    padding-bottom:16px;
+    border-bottom:1px solid var(--border);
+  }
+  .brand{
+    display:flex;
+    align-items:baseline;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  .brand .mark{
+    font-family:var(--font-display);
+    font-weight:600;
+    font-size:15px;
+    letter-spacing:.14em;
+    color:var(--text-faint);
+    text-transform:uppercase;
+  }
+  .brand h1{
+    font-family:var(--font-display);
+    font-weight:700;
+    font-size:clamp(22px,3.4vw,34px);
+    letter-spacing:.01em;
+    margin:0;
+    text-wrap:balance;
+  }
+  .region-pill{
+    font-family:var(--font-display);
+    font-weight:600;
+    font-size:13px;
+    letter-spacing:.08em;
+    color:var(--bg);
+    background:var(--teal);
+    padding:5px 12px;
+    border-radius:999px;
+    text-transform:uppercase;
+  }
+  .meta{
+    display:flex;
+    align-items:center;
+    gap:16px;
+    font-size:13px;
+    color:var(--text-dim);
+  }
+  .period{
+    font-weight:600;
+    color:var(--text);
+  }
+  .live{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    font-family:var(--font-display);
+    font-weight:600;
+    font-size:12px;
+    letter-spacing:.1em;
+    color:var(--live);
+    text-transform:uppercase;
+  }
+  .live .dot{
+    width:8px;height:8px;border-radius:50%;
+    background:var(--live);
+    box-shadow:0 0 0 0 rgba(57,214,138,.6);
+    animation:pulse 2s infinite;
+  }
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(57,214,138,.55);}
+    70%{box-shadow:0 0 0 8px rgba(57,214,138,0);}
+    100%{box-shadow:0 0 0 0 rgba(57,214,138,0);}
+  }
+  .updated-at{color:var(--text-faint);}
+
+  /* ---------- boards ---------- */
+  .boards{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+  }
+  @media (max-width:820px){
+    .boards{grid-template-columns:1fr;}
+  }
+
+  .board{
+    background:linear-gradient(180deg, var(--surface) 0%, var(--surface) 100%);
+    border:1px solid var(--border);
+    border-radius:18px;
+    padding:20px 20px 12px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+  .board-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .board-title{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .board-title .icon{
+    width:34px;height:34px;
+    border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:17px;
+  }
+  .board[data-kind="closer"] .icon{background:var(--gold);color:#3a2405;}
+  .board[data-kind="sdr"] .icon{background:var(--teal);color:#052823;}
+  .board-title h2{
+    margin:0;
+    font-family:var(--font-display);
+    font-weight:600;
+    font-size:19px;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+  }
+  .board-sub{
+    font-size:12px;
+    color:var(--text-faint);
+    letter-spacing:.02em;
+  }
+  .board-legend{
+    display:flex;
+    gap:14px;
+    font-size:11px;
+    color:var(--text-dim);
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    font-weight:600;
+  }
+
+  .rows{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+
+  .row{
+    display:grid;
+    grid-template-columns:40px 1fr auto;
+    align-items:center;
+    gap:12px;
+    padding:12px 14px;
+    border-radius:12px;
+    background:var(--row-alt);
+    border:1px solid transparent;
+    transition:background .25s ease, border-color .25s ease;
+  }
+  .row.rank-1{
+    background:linear-gradient(90deg, rgba(242,184,75,.14), var(--row-alt) 70%);
+    border-color:rgba(242,184,75,.35);
+    padding:16px 16px;
+  }
+  .row.flash{
+    border-color:var(--live);
+    background:linear-gradient(90deg, rgba(57,214,138,.16), var(--row-alt) 75%);
+  }
+
+  .rank{
+    font-family:var(--font-display);
+    font-weight:700;
+    font-size:16px;
+    color:var(--text-faint);
+    text-align:center;
+  }
+  .row.rank-1 .rank{font-size:22px;color:var(--gold);}
+  .row.rank-2 .rank{color:var(--silver);}
+  .row.rank-3 .rank{color:var(--bronze);}
+
+  .who{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    min-width:0;
+  }
+  .who .name{
+    font-weight:700;
+    font-size:15px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .row.rank-1 .who .name{font-size:17px;}
+  .who .tag{
+    font-size:11px;
+    color:var(--text-faint);
+    letter-spacing:.03em;
+  }
+
+  .stats{
+    display:flex;
+    gap:10px;
+    flex-shrink:0;
+  }
+  .stat{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    min-width:64px;
+  }
+  .stat .val{
+    font-family:var(--font-display);
+    font-variant-numeric:tabular-nums;
+    font-weight:700;
+    font-size:19px;
+    line-height:1.1;
+  }
+  .stat .lbl{
+    font-size:9.5px;
+    color:var(--text-faint);
+    text-transform:uppercase;
+    letter-spacing:.09em;
+    margin-top:2px;
+  }
+  .board[data-kind="closer"] .stat.primary .val{color:var(--gold);}
+  .board[data-kind="sdr"] .stat.primary .val{color:var(--teal);}
+
+  .empty{
+    padding:22px 10px;
+    text-align:center;
+    color:var(--text-faint);
+    font-size:13px;
+  }
+
+  footer{
+    text-align:center;
+    font-size:11px;
+    color:var(--text-faint);
+    letter-spacing:.04em;
+    padding-top:4px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand">
+      <span class="mark">CAUP · Capital Upgrade</span>
+      <h1>Ranking Comercial</h1>
+      <span class="region-pill">São Paulo</span>
+    </div>
+    <div class="meta">
+      <span class="period" id="period">—</span>
+      <span class="live"><span class="dot"></span>Ao vivo</span>
+      <span class="updated-at" id="updatedAt">—</span>
+    </div>
+  </div>
+
+  <div class="boards">
+    <section class="board" data-kind="closer">
+      <div class="board-head">
+        <div class="board-title">
+          <span class="icon">🏆</span>
+          <div>
+            <h2>Closers</h2>
+            <div class="board-sub">Show → Venda</div>
+          </div>
+        </div>
+      </div>
+      <div class="rows" id="closerRows"></div>
+    </section>
+
+    <section class="board" data-kind="sdr">
+      <div class="board-head">
+        <div class="board-title">
+          <span class="icon">🎯</span>
+          <div>
+            <h2>SDRs</h2>
+            <div class="board-sub">Agendamento → Show</div>
+          </div>
+        </div>
+      </div>
+      <div class="rows" id="sdrRows"></div>
+    </section>
+  </div>
+
+  <footer>Fonte: dashboard comercial CAUP · atualizado automaticamente</footer>
+</div>
+
+<script>
+(function(){
+  var currency = new Intl.NumberFormat('pt-BR', {style:'currency', currency:'BRL', maximumFractionDigits:0});
+
+  // RANKING_DATA:START — este bloco é substituído automaticamente a cada
+  // atualização (não editar a formatação, só os valores dentro do objeto).
+  var state = {
+    updatedAt: "2026-09-10T12:00:12.147Z",
+    period: "Setembro/2026 · mês inteiro",
+    sdr: [
+      {nome:"Raissa Borges", agendamentos:12, show:5},
+      {nome:"Guilherme Sousa", agendamentos:6, show:4}
+    ],
+    closer: [
+      {nome:"Sarah Limas", show:7, vendaValor:32000, vendaQtd:2},
+      {nome:"Geovane Paschoal", show:3, vendaValor:0, vendaQtd:0},
+      {nome:"Cristine Rocha", show:1, vendaValor:0, vendaQtd:0}
+    ]
+  };
+  // RANKING_DATA:END
+  var prevState = null;
+
+  function medal(rank){
+    if(rank===1) return '🥇';
+    if(rank===2) return '🥈';
+    if(rank===3) return '🥉';
+    return rank;
+  }
+
+  function fmtUpdated(iso){
+    if(!iso) return '—';
+    var d = new Date(iso);
+    if(isNaN(d.getTime())) return '—';
+    var hh = String(d.getUTCHours()-3 < 0 ? d.getUTCHours()+21 : d.getUTCHours()-3).padStart(2,'0');
+    var mm = String(d.getUTCMinutes()).padStart(2,'0');
+    var mins = Math.max(0, Math.round((Date.now()-d.getTime())/60000));
+    var ago = mins < 1 ? 'agora' : (mins===1 ? 'há 1 min' : (mins < 60 ? 'há '+mins+' min' : 'há '+Math.round(mins/60)+'h'));
+    return 'Atualizado às '+hh+':'+mm+' · '+ago;
+  }
+
+  function changed(prevArr, name, field, val){
+    if(!prevArr) return false;
+    var p = prevArr.find(function(r){return r.nome===name;});
+    return p && p[field] !== val;
+  }
+
+  function renderCloser(){
+    var rows = state.closer.slice().sort(function(a,b){
+      if(b.vendaValor !== a.vendaValor) return b.vendaValor - a.vendaValor;
+      return b.show - a.show;
+    });
+    var el = document.getElementById('closerRows');
+    if(!rows.length){ el.innerHTML = '<div class="empty">Sem closers registrados no período.</div>'; return; }
+    el.innerHTML = rows.map(function(r, i){
+      var rank = i+1;
+      var flashShow = changed(prevState && prevState.closer, r.nome, 'show', r.show);
+      var flashVenda = changed(prevState && prevState.closer, r.nome, 'vendaValor', r.vendaValor);
+      return '<div class="row rank-'+rank+(flashShow||flashVenda?' flash':'')+'">'
+        +'<div class="rank">'+medal(rank)+'</div>'
+        +'<div class="who"><span class="name">'+r.nome+'</span><span class="tag">Closer</span></div>'
+        +'<div class="stats">'
+          +'<div class="stat"><span class="val">'+r.show+'</span><span class="lbl">Show</span></div>'
+          +'<div class="stat primary"><span class="val">'+currency.format(r.vendaValor)+'</span><span class="lbl">Venda'+(r.vendaQtd?(' · '+r.vendaQtd):'')+'</span></div>'
+        +'</div>'
+      +'</div>';
+    }).join('');
+  }
+
+  function renderSdr(){
+    var rows = state.sdr.slice().sort(function(a,b){
+      if(b.agendamentos !== a.agendamentos) return b.agendamentos - a.agendamentos;
+      return b.show - a.show;
+    });
+    var el = document.getElementById('sdrRows');
+    if(!rows.length){ el.innerHTML = '<div class="empty">Sem SDRs registrados no período.</div>'; return; }
+    el.innerHTML = rows.map(function(r, i){
+      var rank = i+1;
+      var flashAgend = changed(prevState && prevState.sdr, r.nome, 'agendamentos', r.agendamentos);
+      var flashShow = changed(prevState && prevState.sdr, r.nome, 'show', r.show);
+      return '<div class="row rank-'+rank+(flashAgend||flashShow?' flash':'')+'">'
+        +'<div class="rank">'+medal(rank)+'</div>'
+        +'<div class="who"><span class="name">'+r.nome+'</span><span class="tag">SDR</span></div>'
+        +'<div class="stats">'
+          +'<div class="stat primary"><span class="val">'+r.agendamentos+'</span><span class="lbl">Agend.</span></div>'
+          +'<div class="stat"><span class="val">'+r.show+'</span><span class="lbl">Show</span></div>'
+        +'</div>'
+      +'</div>';
+    }).join('');
+  }
+
+  function renderAll(){
+    document.getElementById('period').textContent = state.period || '—';
+    document.getElementById('updatedAt').textContent = fmtUpdated(state.updatedAt);
+    renderCloser();
+    renderSdr();
+    setTimeout(function(){
+      document.querySelectorAll('.row.flash').forEach(function(el){ el.classList.remove('flash'); });
+    }, 2200);
+  }
+
+  renderAll();
+  setInterval(function(){ document.getElementById('updatedAt').textContent = fmtUpdated(state.updatedAt); }, 30000);
+})();
+</script>
+</body>
+</html>
