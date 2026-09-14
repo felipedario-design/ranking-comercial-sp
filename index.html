@@ -132,8 +132,11 @@
   /* ---------- boards ---------- */
   .boards{
     display:grid;
-    grid-template-columns:1fr 1fr;
+    grid-template-columns:1fr 1fr 1fr;
     gap:20px;
+  }
+  @media (max-width:1180px){
+    .boards{grid-template-columns:1fr 1fr;}
   }
   @media (max-width:820px){
     .boards{grid-template-columns:1fr;}
@@ -167,6 +170,7 @@
   }
   .board[data-kind="closer"] .icon{background:var(--gold);color:#3a2405;}
   .board[data-kind="sdr"] .icon{background:var(--teal);color:#052823;}
+  .board[data-kind="evento"] .icon{background:var(--violet);color:#211a4d;}
   .board-title h2{
     margin:0;
     font-family:var(--font-display);
@@ -275,6 +279,7 @@
   }
   .board[data-kind="closer"] .stat.primary .val{color:var(--gold);}
   .board[data-kind="sdr"] .stat.primary .val{color:var(--teal);}
+  .board[data-kind="evento"] .stat.primary .val{color:var(--violet);}
 
   .empty{
     padding:22px 10px;
@@ -333,6 +338,19 @@
       </div>
       <div class="rows" id="sdrRows"></div>
     </section>
+
+    <section class="board" data-kind="evento">
+      <div class="board-head">
+        <div class="board-title">
+          <span class="icon">🎪</span>
+          <div>
+            <h2>Eventos</h2>
+            <div class="board-sub">Faturamento por vendedor</div>
+          </div>
+        </div>
+      </div>
+      <div class="rows" id="eventoRows"></div>
+    </section>
   </div>
 
   <footer>Fonte: dashboard comercial CAUP · atualizado automaticamente</footer>
@@ -345,35 +363,26 @@
   // RANKING_DATA:START — este bloco é substituído automaticamente a cada
   // atualização (não editar a formatação, só os valores dentro do objeto).
   var state = {
-    "updatedAt": "2026-09-14T13:00:10.833Z",
-    "period": "Setembro/2026 · mês inteiro",
-    "sdr": [
-        {
-            "nome": "Raissa Borges",
-            "agendamentos": 12,
-            "show": 5
-        },
-        {
-            "nome": "Guilherme Sousa",
-            "agendamentos": 11,
-            "show": 6
-        }
+    updatedAt: "2026-09-10T12:00:12.147Z",
+    period: "Setembro/2026 · mês inteiro",
+    sdr: [
+      {nome:"Raissa Borges", agendamentos:12, show:5},
+      {nome:"Guilherme Sousa", agendamentos:6, show:4}
     ],
-    "closer": [
-        {
-            "nome": "Sarah Limas",
-            "show": 9,
-            "vendaValor": 32000,
-            "vendaQtd": 2
-        },
-        {
-            "nome": "Geovane Paschoal",
-            "show": 3,
-            "vendaValor": 0,
-            "vendaQtd": 0
-        }
+    closer: [
+      {nome:"Sarah Limas", show:7, vendaValor:32000, vendaQtd:2},
+      {nome:"Geovane Paschoal", show:3, vendaValor:0, vendaQtd:0},
+      {nome:"Cristine Rocha", show:1, vendaValor:0, vendaQtd:0}
+    ],
+    evento: [
+      {nome:"Cristine Rocha", vendido:330000, negocios:1},
+      {nome:"Davi Gomes", vendido:0, negocios:0},
+      {nome:"Emerson Iorio", vendido:0, negocios:0},
+      {nome:"Nadja Maria", vendido:0, negocios:0},
+      {nome:"Roalison Oliveira", vendido:0, negocios:0},
+      {nome:"Laiza Almeida", vendido:0, negocios:0}
     ]
-};
+  };
   // RANKING_DATA:END
   var prevState = null;
 
@@ -445,11 +454,32 @@
     }).join('');
   }
 
+  function renderEvento(){
+    var rows = (state.evento || []).slice().sort(function(a,b){
+      if(b.vendido !== a.vendido) return b.vendido - a.vendido;
+      return b.negocios - a.negocios;
+    });
+    var el = document.getElementById('eventoRows');
+    if(!rows.length){ el.innerHTML = '<div class="empty">Sem vendedores registrados no período.</div>'; return; }
+    el.innerHTML = rows.map(function(r, i){
+      var rank = i+1;
+      var flashVendido = changed(prevState && prevState.evento, r.nome, 'vendido', r.vendido);
+      return '<div class="row rank-'+rank+(flashVendido?' flash':'')+'">'
+        +'<div class="rank">'+medal(rank)+'</div>'
+        +'<div class="who"><span class="name">'+r.nome+'</span><span class="tag">Evento</span></div>'
+        +'<div class="stats">'
+          +'<div class="stat primary"><span class="val">'+currency.format(r.vendido)+'</span><span class="lbl">Faturamento'+(r.negocios?(' · '+r.negocios):'')+'</span></div>'
+        +'</div>'
+      +'</div>';
+    }).join('');
+  }
+
   function renderAll(){
     document.getElementById('period').textContent = state.period || '—';
     document.getElementById('updatedAt').textContent = fmtUpdated(state.updatedAt);
     renderCloser();
     renderSdr();
+    renderEvento();
     setTimeout(function(){
       document.querySelectorAll('.row.flash').forEach(function(el){ el.classList.remove('flash'); });
     }, 2200);
