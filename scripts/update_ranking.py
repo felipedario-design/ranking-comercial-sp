@@ -12,6 +12,7 @@ import urllib.request
 from datetime import datetime, timezone, timedelta
 
 API_BASE = "https://dashcaup.v4ferrazpiai.com.br/api/sp-dash"
+EVENTO_API_BASE = "https://portal-comercial-delta.vercel.app/api/evento-vendedores"
 HTML_PATH = "index.html"
 
 MESES_PT = [
@@ -30,7 +31,27 @@ def fetch_dashboard(ano: int, mes: int) -> dict:
         return json.loads(resp.read().decode("utf-8"))
 
 
-def build_state(data: dict, ano: int, mes: int) -> dict:
+def fetch_evento(ano: int, mes: int) -> list:
+    """Busca o desempenho por vendedor do time de Eventos (Portal Comercial).
+
+    Este endpoint não exige login (testado sem cookies/sessão), então não
+    precisamos de nenhuma credencial guardada no GitHub Actions.
+    """
+    url = f"{EVENTO_API_BASE}?ano={ano}&mes={mes}"
+    req = urllib.request.Request(url, headers={"User-Agent": "caup-ranking-bot"})
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    return [
+        {
+            "nome": item.get("nome", "—"),
+            "vendido": item.get("vendido", 0) or 0,
+            "negocios": item.get("negocios", 0) or 0,
+        }
+        for item in data.get("vendedores", [])
+    ]
+
+
+def build_state(data: dict, ano: int, mes: int, evento: list) -> dict:
     sdr = [
         {
             "nome": item.get("nome", "—"),
@@ -50,7 +71,22 @@ def build_state(data: dict, ano: int, mes: int) -> dict:
     ]
     updated_at = (data.get("funil") or {}).get("AtualizadoEm") or datetime.now(timezone.utc).isoformat()
     period = f"{MESES_PT[mes]}/{ano} · mês inteiro"
-    return {"updatedAt": updated_at, "period": period, "sdr": sdr, "closer": closer}
+    return {"updatedAt": updated_at, "period": period, "sdr": sdr, "closer": closer, "evento": evento}
+
+
+def extract_current_state(html: str) -> dict:
+    """Lê o bloco RANKING_DATA atual do index.html (usado como fallback)."""
+    marker_re = re.compile(
+        r"// RANKING_DATA:START.*?var state = (\{.*?\});\s*// RANKING_DATA:END",
+        re.DOTALL,
+    )
+    m = marker_re.search(html)
+    if not m:
+        return {}
+    try:
+        return json.loads(m.group(1))
+    except json.JSONDecodeError:
+        return {}
 
 
 def replace_state(html: str, state: dict) -> str:
@@ -74,10 +110,16 @@ def main() -> int:
         print(f"ERRO ao buscar dashboard: {exc}", file=sys.stderr)
         return 1
 
-    state = build_state(data, ano, mes)
-
     with open(HTML_PATH, "r", encoding="utf-8") as f:
         html = f.read()
+
+    try:
+        evento = fetch_evento(ano, mes)
+    except Exception as exc:  # noqa: BLE001
+        print(f"AVISO: falha ao buscar dados de Eventos, mantendo os últimos valores: {exc}", file=sys.stderr)
+        evento = extract_current_state(html).get("evento", [])
+
+    state = build_state(data, ano, mes, evento)
 
     try:
         new_html = replace_state(html, state)
