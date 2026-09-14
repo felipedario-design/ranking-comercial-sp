@@ -8,10 +8,13 @@ novo estado do ranking e substitui o bloco RANKING_DATA dentro do index.html.
 import json
 import re
 import sys
+import time
 import urllib.request
 from datetime import datetime, timezone, timedelta
 
 API_BASE = "https://dashcaup.v4ferrazpiai.com.br/api/sp-dash"
+REFRESH_TRIGGER_URL = "https://dashcaup.v4ferrazpiai.com.br/api/refresh?escopo=sao-paulo"
+REFRESH_STATUS_URL = "https://dashcaup.v4ferrazpiai.com.br/api/refresh"
 EVENTO_API_BASE = "https://portal-comercial-delta.vercel.app/api/evento-vendedores"
 HTML_PATH = "index.html"
 
@@ -22,6 +25,35 @@ MESES_PT = [
 
 # São Paulo é UTC-3 o ano todo (sem horário de verão desde 2019).
 SP_TZ = timezone(timedelta(hours=-3))
+
+
+def trigger_refresh(max_wait_seconds: int = 90, poll_interval: int = 4) -> None:
+    """Manda o dashboard recalcular os números antes de lermos eles.
+
+    Descoberto observando o botão "Atualizar" do próprio dashboard: sem isso,
+    a API /api/sp-dash devolve um retrato (snapshot) que só é recalculado
+    quando alguém aperta esse botão manualmente — o que fazia nosso robô
+    ficar sempre "atrasado" em relação ao que um humano via na tela. Chamamos
+    o mesmo endpoint que o botão chama e esperamos o recálculo terminar.
+    """
+    req = urllib.request.Request(
+        REFRESH_TRIGGER_URL, method="POST", headers={"User-Agent": "caup-ranking-bot"}
+    )
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        json.loads(resp.read().decode("utf-8"))
+
+    waited = 0
+    while waited < max_wait_seconds:
+        time.sleep(poll_interval)
+        waited += poll_interval
+        status_req = urllib.request.Request(
+            REFRESH_STATUS_URL, headers={"User-Agent": "caup-ranking-bot"}
+        )
+        with urllib.request.urlopen(status_req, timeout=30) as resp:
+            status = json.loads(resp.read().decode("utf-8"))
+        if not status.get("rodando"):
+            return
+    print("AVISO: recálculo do dashboard ainda em andamento após o tempo limite; seguindo com os dados disponíveis.", file=sys.stderr)
 
 
 def fetch_dashboard(ano: int, mes: int) -> dict:
@@ -103,6 +135,11 @@ def replace_state(html: str, state: dict) -> str:
 def main() -> int:
     now_sp = datetime.now(SP_TZ)
     ano, mes = now_sp.year, now_sp.month
+
+    try:
+        trigger_refresh()
+    except Exception as exc:  # noqa: BLE001
+        print(f"AVISO: não consegui disparar o recálculo do dashboard, lendo o último retrato disponível: {exc}", file=sys.stderr)
 
     try:
         data = fetch_dashboard(ano, mes)
