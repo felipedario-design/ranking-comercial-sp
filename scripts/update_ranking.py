@@ -83,8 +83,8 @@ def fetch_evento(ano: int, mes: int) -> list:
     ]
 
 
-def build_state(data: dict, ano: int, mes: int, evento: list) -> dict:
-    sdr = [
+def extract_sdr(data: dict) -> list:
+    return [
         {
             "nome": item.get("nome", "—"),
             "agendamentos": item.get("agendRealizado", 0) or 0,
@@ -92,7 +92,10 @@ def build_state(data: dict, ano: int, mes: int, evento: list) -> dict:
         }
         for item in data.get("ranking_sdr", [])
     ]
-    closer = [
+
+
+def extract_closer(data: dict) -> list:
+    return [
         {
             "nome": item.get("nome", "—"),
             "show": item.get("showRealizado", 0) or 0,
@@ -101,6 +104,33 @@ def build_state(data: dict, ano: int, mes: int, evento: list) -> dict:
         }
         for item in data.get("ranking_closer", [])
     ]
+
+
+def dedupe_evento_closer(closer: list, evento: list) -> list:
+    """Evita contar duas vezes o faturamento de quem atua nos dois funis.
+
+    Alguns vendedores (ex.: Cristine Rocha) aparecem tanto em Closers quanto
+    em Eventos. Quando o negócio é ganho como Closer, o valor já entra no
+    faturamento de Closer — então subtraímos do total de Eventos o que já
+    foi contabilizado em Closer para o mesmo vendedor, pra não duplicar.
+    Só é aplicado sobre um retrato de Eventos recém-buscado da API (nunca
+    sobre o fallback do último HTML, que já sai líquido).
+    """
+    closer_by_nome = {c["nome"]: c for c in closer}
+    result = []
+    for item in evento:
+        nome = item.get("nome", "—")
+        vendido = item.get("vendido", 0) or 0
+        negocios = item.get("negocios", 0) or 0
+        c = closer_by_nome.get(nome)
+        if c:
+            vendido = max(0, vendido - (c.get("vendaValor", 0) or 0))
+            negocios = max(0, negocios - (c.get("vendaQtd", 0) or 0))
+        result.append({"nome": nome, "vendido": vendido, "negocios": negocios})
+    return result
+
+
+def build_state(data: dict, ano: int, mes: int, sdr: list, closer: list, evento: list) -> dict:
     updated_at = (data.get("funil") or {}).get("AtualizadoEm") or datetime.now(timezone.utc).isoformat()
     period = f"{MESES_PT[mes]}/{ano} · mês inteiro"
     return {"updatedAt": updated_at, "period": period, "sdr": sdr, "closer": closer, "evento": evento}
@@ -150,13 +180,17 @@ def main() -> int:
     with open(HTML_PATH, "r", encoding="utf-8") as f:
         html = f.read()
 
+    sdr = extract_sdr(data)
+    closer = extract_closer(data)
+
     try:
-        evento = fetch_evento(ano, mes)
+        evento_bruto = fetch_evento(ano, mes)
+        evento = dedupe_evento_closer(closer, evento_bruto)
     except Exception as exc:  # noqa: BLE001
         print(f"AVISO: falha ao buscar dados de Eventos, mantendo os últimos valores: {exc}", file=sys.stderr)
         evento = extract_current_state(html).get("evento", [])
 
-    state = build_state(data, ano, mes, evento)
+    state = build_state(data, ano, mes, sdr, closer, evento)
 
     try:
         new_html = replace_state(html, state)
