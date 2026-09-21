@@ -163,12 +163,14 @@
     display:flex;
     align-items:center;
     gap:10px;
+    min-width:0;
   }
   .board-title .icon{
     width:34px;height:34px;
     border-radius:10px;
     display:flex;align-items:center;justify-content:center;
     font-size:17px;
+    flex-shrink:0;
   }
   .board[data-kind="closer"] .icon{background:var(--gold);color:#3a2405;}
   .board[data-kind="sdr"] .icon{background:var(--teal);color:#052823;}
@@ -195,6 +197,31 @@
     letter-spacing:.08em;
     font-weight:600;
   }
+
+  .board-total{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    flex-shrink:0;
+  }
+  .board-total .val{
+    font-family:var(--font-display);
+    font-variant-numeric:tabular-nums;
+    font-weight:700;
+    font-size:clamp(15px, 1.55vw, 22px);
+    line-height:1.1;
+    white-space:nowrap;
+  }
+  .board-total .lbl{
+    font-size:clamp(8.5px, 0.7vw, 9.5px);
+    color:var(--text-faint);
+    text-transform:uppercase;
+    letter-spacing:.09em;
+    margin-top:2px;
+    white-space:nowrap;
+  }
+  .board[data-kind="closer"] .board-total .val{color:var(--gold);}
+  .board[data-kind="evento"] .board-total .val{color:var(--violet);}
 
   .rows{
     display:flex;
@@ -327,6 +354,10 @@
             <div class="board-sub">Show → Venda</div>
           </div>
         </div>
+        <div class="board-total">
+          <span class="val" id="closerTotalVal">—</span>
+          <span class="lbl">Total faturado</span>
+        </div>
       </div>
       <div class="rows" id="closerRows"></div>
     </section>
@@ -353,6 +384,10 @@
             <div class="board-sub">Faturamento por vendedor</div>
           </div>
         </div>
+        <div class="board-total">
+          <span class="val" id="eventoTotalVal">—</span>
+          <span class="lbl">Total faturado</span>
+        </div>
       </div>
       <div class="rows" id="eventoRows"></div>
     </section>
@@ -368,7 +403,7 @@
   // RANKING_DATA:START — este bloco é substituído automaticamente a cada
   // atualização (não editar a formatação, só os valores dentro do objeto).
   var state = {
-    "updatedAt": "2026-09-21T11:59:27.367Z",
+    "updatedAt": "2026-09-21T11:23:40.985Z",
     "period": "Setembro/2026 · mês inteiro",
     "sdr": [
         {
@@ -386,8 +421,8 @@
         {
             "nome": "Cristine Rocha",
             "show": 0,
-            "vendaValor": 450000,
-            "vendaQtd": 3
+            "vendaValor": 230000,
+            "vendaQtd": 2
         },
         {
             "nome": "Sarah Limas",
@@ -467,11 +502,17 @@
     return p && p[field] !== val;
   }
 
+  function sumBy(arr, field){
+    return (arr||[]).reduce(function(acc, r){ return acc + (r[field] || 0); }, 0);
+  }
+
   function renderCloser(){
     var rows = state.closer.slice().sort(function(a,b){
       if(b.vendaValor !== a.vendaValor) return b.vendaValor - a.vendaValor;
       return b.show - a.show;
     });
+    var totalEl = document.getElementById('closerTotalVal');
+    if(totalEl) totalEl.textContent = currency.format(sumBy(state.closer, 'vendaValor'));
     var el = document.getElementById('closerRows');
     if(!rows.length){ el.innerHTML = '<div class="empty">Sem closers registrados no período.</div>'; return; }
     el.innerHTML = rows.map(function(r, i){
@@ -516,6 +557,8 @@
       if(b.vendido !== a.vendido) return b.vendido - a.vendido;
       return b.negocios - a.negocios;
     });
+    var totalEl = document.getElementById('eventoTotalVal');
+    if(totalEl) totalEl.textContent = currency.format(sumBy(state.evento, 'vendido'));
     var el = document.getElementById('eventoRows');
     if(!rows.length){ el.innerHTML = '<div class="empty">Sem vendedores registrados no período.</div>'; return; }
     el.innerHTML = rows.map(function(r, i){
