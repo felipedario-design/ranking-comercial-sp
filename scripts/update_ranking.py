@@ -16,7 +16,16 @@ API_BASE = "https://dashcaup.v4ferrazpiai.com.br/api/sp-dash"
 REFRESH_TRIGGER_URL = "https://dashcaup.v4ferrazpiai.com.br/api/refresh?escopo=sao-paulo"
 REFRESH_STATUS_URL = "https://dashcaup.v4ferrazpiai.com.br/api/refresh"
 EVENTO_API_BASE = "https://portal-comercial-delta.vercel.app/api/evento-vendedores"
+TUDO_API_BASE = "https://portal-comercial-delta.vercel.app/api/tudo"
 HTML_PATH = "index.html"
+
+# Nome fixo do Key Account de São Paulo. O portal comercial só expõe o total
+# do canal "Key Account" agregado (sem quebra por vendedor), mas hoje só a
+# Cristine Rocha atua nesse funil em São Paulo — os negócios que antes
+# apareciam como dela em "Closer" foram reclassificados para esse canal (o
+# valor bateu exatamente com o que sumiu do ranking_closer). Se mais alguém
+# entrar nesse funil, este nome vira uma lista e a lógica precisa mudar.
+KEY_ACCOUNT_NOME = "Cristine Rocha"
 
 MESES_PT = [
     "", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -83,6 +92,25 @@ def fetch_evento(ano: int, mes: int) -> list:
     ]
 
 
+def fetch_key_account(ano: int, mes: int) -> list:
+    """Busca o faturamento do canal Key Account (Portal Comercial).
+
+    Não existe um endpoint "por vendedor" para Key Account — só o total do
+    canal, dentro de /api/tudo -> visaoGeralPorCanal.keyAccount. Como hoje só
+    a Cristine Rocha atua nesse funil em São Paulo, atribuímos o total a ela.
+    """
+    url = f"{TUDO_API_BASE}?ano={ano}&mes={mes}"
+    req = urllib.request.Request(url, headers={"User-Agent": "caup-ranking-bot"})
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    canal = (data.get("visaoGeralPorCanal") or {}).get("keyAccount") or {}
+    vendido = canal.get("realizado", 0) or 0
+    negocios = canal.get("vendaQtd", 0) or 0
+    if not vendido and not negocios:
+        return []
+    return [{"nome": KEY_ACCOUNT_NOME, "vendido": vendido, "negocios": negocios}]
+
+
 def extract_sdr(data: dict) -> list:
     return [
         {
@@ -130,10 +158,17 @@ def dedupe_evento_closer(closer: list, evento: list) -> list:
     return result
 
 
-def build_state(data: dict, ano: int, mes: int, sdr: list, closer: list, evento: list) -> dict:
+def build_state(data: dict, ano: int, mes: int, sdr: list, closer: list, evento: list, keyaccount: list) -> dict:
     updated_at = (data.get("funil") or {}).get("AtualizadoEm") or datetime.now(timezone.utc).isoformat()
     period = f"{MESES_PT[mes]}/{ano} · mês inteiro"
-    return {"updatedAt": updated_at, "period": period, "sdr": sdr, "closer": closer, "evento": evento}
+    return {
+        "updatedAt": updated_at,
+        "period": period,
+        "sdr": sdr,
+        "closer": closer,
+        "evento": evento,
+        "keyaccount": keyaccount,
+    }
 
 
 def extract_current_state(html: str) -> dict:
@@ -190,7 +225,13 @@ def main() -> int:
         print(f"AVISO: falha ao buscar dados de Eventos, mantendo os últimos valores: {exc}", file=sys.stderr)
         evento = extract_current_state(html).get("evento", [])
 
-    state = build_state(data, ano, mes, sdr, closer, evento)
+    try:
+        keyaccount = fetch_key_account(ano, mes)
+    except Exception as exc:  # noqa: BLE001
+        print(f"AVISO: falha ao buscar dados de Key Account, mantendo os últimos valores: {exc}", file=sys.stderr)
+        keyaccount = extract_current_state(html).get("keyaccount", [])
+
+    state = build_state(data, ano, mes, sdr, closer, evento, keyaccount)
 
     try:
         new_html = replace_state(html, state)
