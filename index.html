@@ -25,6 +25,8 @@
     --teal-dim:#0f3d38;
     --violet:#9c8bfb;
     --violet-dim:#251f4a;
+    --rose:#f2789c;
+    --rose-dim:#3a1a29;
     --live:#39d68a;
     --font-display:'Oswald',ui-sans-serif,system-ui,sans-serif;
     --font-body:'Manrope',ui-sans-serif,system-ui,sans-serif;
@@ -44,7 +46,7 @@
   }
 
   .wrap{
-    max-width:1680px;
+    max-width:1900px;
     margin:0 auto;
     display:flex;
     flex-direction:column;
@@ -130,16 +132,19 @@
   .updated-at{color:var(--text-faint);}
 
   /* ---------- boards ---------- */
-  /* Sempre 3 colunas lado a lado a partir de telas pequenas — pensado para
-     caber numa TV (1024px+) sem quebrar linha. Só empilha em 1 coluna em
-     telas de celular bem estreitas. */
+  /* 4 colunas lado a lado a partir de telas médias — pensado para caber
+     numa TV (1024px+) sem quebrar linha. Vai reduzindo para 2 e depois 1
+     coluna conforme a tela fica mais estreita (celular). */
   .boards{
     display:grid;
-    grid-template-columns:repeat(3, 1fr);
-    gap:clamp(10px, 1.6vw, 20px);
+    grid-template-columns:repeat(4, 1fr);
+    gap:clamp(8px, 1.2vw, 16px);
     align-items:start;
   }
-  @media (max-width:760px){
+  @media (max-width:1100px){
+    .boards{grid-template-columns:repeat(2, 1fr);}
+  }
+  @media (max-width:560px){
     .boards{grid-template-columns:1fr;}
   }
 
@@ -147,10 +152,10 @@
     background:linear-gradient(180deg, var(--surface) 0%, var(--surface) 100%);
     border:1px solid var(--border);
     border-radius:18px;
-    padding:clamp(12px, 1.6vw, 20px) clamp(12px, 1.6vw, 20px) clamp(8px, 1vw, 12px);
+    padding:clamp(12px, 1.4vw, 20px) clamp(12px, 1.4vw, 20px) clamp(8px, 1vw, 12px);
     display:flex;
     flex-direction:column;
-    gap:clamp(10px, 1.2vw, 14px);
+    gap:clamp(10px, 1.1vw, 14px);
     min-width:0;
   }
   .board-head{
@@ -175,11 +180,12 @@
   .board[data-kind="closer"] .icon{background:var(--gold);color:#3a2405;}
   .board[data-kind="sdr"] .icon{background:var(--teal);color:#052823;}
   .board[data-kind="evento"] .icon{background:var(--violet);color:#211a4d;}
+  .board[data-kind="keyaccount"] .icon{background:var(--rose);color:#3a0d1c;}
   .board-title h2{
     margin:0;
     font-family:var(--font-display);
     font-weight:600;
-    font-size:clamp(15px, 1.3vw, 19px);
+    font-size:clamp(14px, 1.15vw, 19px);
     letter-spacing:.04em;
     text-transform:uppercase;
   }
@@ -208,7 +214,7 @@
     font-family:var(--font-display);
     font-variant-numeric:tabular-nums;
     font-weight:700;
-    font-size:clamp(15px, 1.55vw, 22px);
+    font-size:clamp(14px, 1.4vw, 22px);
     line-height:1.1;
     white-space:nowrap;
   }
@@ -222,6 +228,7 @@
   }
   .board[data-kind="closer"] .board-total .val{color:var(--gold);}
   .board[data-kind="evento"] .board-total .val{color:var(--violet);}
+  .board[data-kind="keyaccount"] .board-total .val{color:var(--rose);}
 
   .rows{
     display:flex;
@@ -231,10 +238,10 @@
 
   .row{
     display:grid;
-    grid-template-columns:clamp(26px,2.4vw,40px) 1fr auto;
+    grid-template-columns:clamp(24px,2.1vw,40px) 1fr auto;
     align-items:center;
-    gap:clamp(8px, 1vw, 12px);
-    padding:clamp(8px, 1vw, 12px) clamp(10px, 1.1vw, 14px);
+    gap:clamp(6px, 0.9vw, 12px);
+    padding:clamp(8px, 1vw, 12px) clamp(9px, 1vw, 14px);
     border-radius:12px;
     background:var(--row-alt);
     border:1px solid transparent;
@@ -244,7 +251,7 @@
   .row.rank-1{
     background:linear-gradient(90deg, rgba(242,184,75,.14), var(--row-alt) 70%);
     border-color:rgba(242,184,75,.35);
-    padding:clamp(10px, 1.2vw, 16px);
+    padding:clamp(10px, 1.1vw, 16px);
   }
   .row.flash{
     border-color:var(--live);
@@ -254,11 +261,11 @@
   .rank{
     font-family:var(--font-display);
     font-weight:700;
-    font-size:clamp(13px, 1.15vw, 16px);
+    font-size:clamp(12px, 1vw, 16px);
     color:var(--text-faint);
     text-align:center;
   }
-  .row.rank-1 .rank{font-size:clamp(17px, 1.6vw, 22px);color:var(--gold);}
+  .row.rank-1 .rank{font-size:clamp(16px, 1.4vw, 22px);color:var(--gold);}
   .row.rank-2 .rank{color:var(--silver);}
   .row.rank-3 .rank{color:var(--bronze);}
 
@@ -270,21 +277,21 @@
   }
   .who .name{
     font-weight:700;
-    font-size:clamp(12.5px, 1.1vw, 15px);
+    font-size:clamp(11.5px, 1vw, 15px);
     white-space:nowrap;
     overflow:hidden;
     text-overflow:ellipsis;
   }
-  .row.rank-1 .who .name{font-size:clamp(13.5px, 1.25vw, 17px);}
+  .row.rank-1 .who .name{font-size:clamp(12.5px, 1.15vw, 17px);}
   .who .tag{
-    font-size:clamp(9.5px, 0.8vw, 11px);
+    font-size:clamp(9px, 0.75vw, 11px);
     color:var(--text-faint);
     letter-spacing:.03em;
   }
 
   .stats{
     display:flex;
-    gap:clamp(6px, 0.8vw, 10px);
+    gap:clamp(5px, 0.7vw, 10px);
     flex-shrink:0;
   }
   .stat{
@@ -297,12 +304,12 @@
     font-family:var(--font-display);
     font-variant-numeric:tabular-nums;
     font-weight:700;
-    font-size:clamp(14px, 1.35vw, 19px);
+    font-size:clamp(13px, 1.2vw, 19px);
     line-height:1.1;
     white-space:nowrap;
   }
   .stat .lbl{
-    font-size:clamp(8.5px, 0.7vw, 9.5px);
+    font-size:clamp(8px, 0.65vw, 9.5px);
     color:var(--text-faint);
     text-transform:uppercase;
     letter-spacing:.09em;
@@ -312,6 +319,7 @@
   .board[data-kind="closer"] .stat.primary .val{color:var(--gold);}
   .board[data-kind="sdr"] .stat.primary .val{color:var(--teal);}
   .board[data-kind="evento"] .stat.primary .val{color:var(--violet);}
+  .board[data-kind="keyaccount"] .stat.primary .val{color:var(--rose);}
 
   .empty{
     padding:22px 10px;
@@ -391,6 +399,23 @@
       </div>
       <div class="rows" id="eventoRows"></div>
     </section>
+
+    <section class="board" data-kind="keyaccount">
+      <div class="board-head">
+        <div class="board-title">
+          <span class="icon">🔑</span>
+          <div>
+            <h2>Key Account</h2>
+            <div class="board-sub">Faturamento por vendedor</div>
+          </div>
+        </div>
+        <div class="board-total">
+          <span class="val" id="keyaccountTotalVal">—</span>
+          <span class="lbl">Total faturado</span>
+        </div>
+      </div>
+      <div class="rows" id="keyaccountRows"></div>
+    </section>
   </div>
 
   <footer>Fonte: dashboard comercial CAUP · atualizado automaticamente</footer>
@@ -466,6 +491,13 @@
             "nome": "Roalison Oliveira",
             "vendido": 0,
             "negocios": 0
+        }
+    ],
+    "keyaccount": [
+        {
+            "nome": "Cristine Rocha",
+            "vendido": 450000,
+            "negocios": 3
         }
     ]
 };
@@ -568,12 +600,35 @@
     }).join('');
   }
 
+  function renderKeyAccount(){
+    var rows = (state.keyaccount || []).slice().sort(function(a,b){
+      if(b.vendido !== a.vendido) return b.vendido - a.vendido;
+      return b.negocios - a.negocios;
+    });
+    var totalEl = document.getElementById('keyaccountTotalVal');
+    if(totalEl) totalEl.textContent = currency.format(sumBy(state.keyaccount, 'vendido'));
+    var el = document.getElementById('keyaccountRows');
+    if(!rows.length){ el.innerHTML = '<div class="empty">Sem vendedores registrados no período.</div>'; return; }
+    el.innerHTML = rows.map(function(r, i){
+      var rank = i+1;
+      var flashVendido = changed(prevState && prevState.keyaccount, r.nome, 'vendido', r.vendido);
+      return '<div class="row rank-'+rank+(flashVendido?' flash':'')+'">'
+        +'<div class="rank">'+medal(rank)+'</div>'
+        +'<div class="who"><span class="name">'+r.nome+'</span><span class="tag">Key Account</span></div>'
+        +'<div class="stats">'
+          +'<div class="stat primary"><span class="val">'+currency.format(r.vendido)+'</span><span class="lbl">Faturamento'+(r.negocios?(' · '+r.negocios):'')+'</span></div>'
+        +'</div>'
+      +'</div>';
+    }).join('');
+  }
+
   function renderAll(){
     document.getElementById('period').textContent = state.period || '—';
     document.getElementById('updatedAt').textContent = fmtUpdated(state.updatedAt);
     renderCloser();
     renderSdr();
     renderEvento();
+    renderKeyAccount();
     setTimeout(function(){
       document.querySelectorAll('.row.flash').forEach(function(el){ el.classList.remove('flash'); });
     }, 2200);
