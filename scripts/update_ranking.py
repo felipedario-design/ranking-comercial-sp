@@ -2,22 +2,30 @@
 """Atualiza index.html com os números mais recentes do dashboard CAUP (São Paulo).
 
 Roda dentro do GitHub Actions (hospedado no próprio GitHub, sem depender de
-nenhum serviço externo do Claude): busca a API pública do dashboard, monta o
-novo estado do ranking e substitui o bloco RANKING_DATA dentro do index.html.
+nenhum serviço externo do Claude): busca a API pública do Portal Comercial,
+monta o novo estado do ranking e substitui o bloco RANKING_DATA dentro do
+index.html.
 """
 import json
 import re
 import sys
-import time
 import urllib.request
 from datetime import datetime, timezone, timedelta
 
-API_BASE = "https://dashcaup.v4ferrazpiai.com.br/api/sp-dash"
-REFRESH_TRIGGER_URL = "https://dashcaup.v4ferrazpiai.com.br/api/refresh?escopo=sao-paulo"
-REFRESH_STATUS_URL = "https://dashcaup.v4ferrazpiai.com.br/api/refresh"
-EVENTO_API_BASE = "https://portal-comercial-delta.vercel.app/api/evento-vendedores"
 TUDO_API_BASE = "https://portal-comercial-delta.vercel.app/api/tudo"
+EVENTO_API_BASE = "https://portal-comercial-delta.vercel.app/api/evento-vendedores"
 HTML_PATH = "index.html"
+
+# O Portal Comercial (portal-comercial-delta) é único para a empresa toda —
+# os rankings de Closer e SDR que ele devolve misturam gente de Fortaleza,
+# Alphaville e São Paulo no mesmo array, sem nenhum campo de região confiável
+# (o campo "unidade" que aparece em alguns lugares é só um rótulo legado do
+# squad, não reflete a região real). O time de São Paulo hoje é só este:
+# Closers: Sarah Limas, Geovane Paschoal, Clayton Martins (squad "resultado")
+# SDRs: Raissa Borges, Guilherme Sousa (squad "resultado")
+# Se o time mudar, ajuste as listas abaixo.
+SP_CLOSER_NOMES = ["Sarah Limas", "Geovane Paschoal", "Clayton Martins"]
+SP_SDR_NOMES = ["Raissa Borges", "Guilherme Sousa"]
 
 # Nome fixo do Key Account de São Paulo. O portal comercial só expõe o total
 # do canal "Key Account" agregado (sem quebra por vendedor), mas hoje só a
@@ -36,37 +44,14 @@ MESES_PT = [
 SP_TZ = timezone(timedelta(hours=-3))
 
 
-def trigger_refresh(max_wait_seconds: int = 90, poll_interval: int = 4) -> None:
-    """Manda o dashboard recalcular os números antes de lermos eles.
+def fetch_tudo(ano: int, mes: int) -> dict:
+    """Busca o retrato geral da empresa (Portal Comercial).
 
-    Descoberto observando o botão "Atualizar" do próprio dashboard: sem isso,
-    a API /api/sp-dash devolve um retrato (snapshot) que só é recalculado
-    quando alguém aperta esse botão manualmente — o que fazia nosso robô
-    ficar sempre "atrasado" em relação ao que um humano via na tela. Chamamos
-    o mesmo endpoint que o botão chama e esperamos o recálculo terminar.
+    Esse endpoint já vem atualizado sozinho (sem precisar de um botão
+    "Atualizar" como a fonte antiga) — o campo atualizadoEm bate com o
+    horário real do sistema.
     """
-    req = urllib.request.Request(
-        REFRESH_TRIGGER_URL, method="POST", headers={"User-Agent": "caup-ranking-bot"}
-    )
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        json.loads(resp.read().decode("utf-8"))
-
-    waited = 0
-    while waited < max_wait_seconds:
-        time.sleep(poll_interval)
-        waited += poll_interval
-        status_req = urllib.request.Request(
-            REFRESH_STATUS_URL, headers={"User-Agent": "caup-ranking-bot"}
-        )
-        with urllib.request.urlopen(status_req, timeout=30) as resp:
-            status = json.loads(resp.read().decode("utf-8"))
-        if not status.get("rodando"):
-            return
-    print("AVISO: recálculo do dashboard ainda em andamento após o tempo limite; seguindo com os dados disponíveis.", file=sys.stderr)
-
-
-def fetch_dashboard(ano: int, mes: int) -> dict:
-    url = f"{API_BASE}?tipo=tudo&ano={ano}&mes={mes}"
+    url = f"{TUDO_API_BASE}?ano={ano}&mes={mes}"
     req = urllib.request.Request(url, headers={"User-Agent": "caup-ranking-bot"})
     with urllib.request.urlopen(req, timeout=30) as resp:
         return json.loads(resp.read().decode("utf-8"))
@@ -92,46 +77,48 @@ def fetch_evento(ano: int, mes: int) -> list:
     ]
 
 
-def fetch_key_account(ano: int, mes: int) -> list:
-    """Busca o faturamento do canal Key Account (Portal Comercial).
+def extract_closer(data: dict) -> list:
+    """Filtra o ranking_closer (empresa toda) para só os closers de São Paulo."""
+    by_nome = {item.get("nome"): item for item in data.get("ranking_closer", [])}
+    result = []
+    for nome in SP_CLOSER_NOMES:
+        item = by_nome.get(nome) or {}
+        result.append({
+            "nome": nome,
+            "show": item.get("showRealizado", 0) or 0,
+            "vendaValor": item.get("vendaFaturamento", 0) or 0,
+            "vendaQtd": item.get("vendaRealizado", 0) or 0,
+        })
+    return result
+
+
+def extract_sdr(data: dict) -> list:
+    """Filtra o ranking_sdr (empresa toda) para só os SDRs de São Paulo."""
+    by_nome = {item.get("nome"): item for item in data.get("ranking_sdr", [])}
+    result = []
+    for nome in SP_SDR_NOMES:
+        item = by_nome.get(nome) or {}
+        result.append({
+            "nome": nome,
+            "agendamentos": item.get("agendRealizado", 0) or 0,
+            "show": item.get("showRealizado", 0) or 0,
+        })
+    return result
+
+
+def extract_key_account(data: dict) -> list:
+    """Extrai o faturamento do canal Key Account (Portal Comercial).
 
     Não existe um endpoint "por vendedor" para Key Account — só o total do
     canal, dentro de /api/tudo -> visaoGeralPorCanal.keyAccount. Como hoje só
     a Cristine Rocha atua nesse funil em São Paulo, atribuímos o total a ela.
     """
-    url = f"{TUDO_API_BASE}?ano={ano}&mes={mes}"
-    req = urllib.request.Request(url, headers={"User-Agent": "caup-ranking-bot"})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        data = json.loads(resp.read().decode("utf-8"))
     canal = (data.get("visaoGeralPorCanal") or {}).get("keyAccount") or {}
     vendido = canal.get("realizado", 0) or 0
     negocios = canal.get("vendaQtd", 0) or 0
     if not vendido and not negocios:
         return []
     return [{"nome": KEY_ACCOUNT_NOME, "vendido": vendido, "negocios": negocios}]
-
-
-def extract_sdr(data: dict) -> list:
-    return [
-        {
-            "nome": item.get("nome", "—"),
-            "agendamentos": item.get("agendRealizado", 0) or 0,
-            "show": item.get("showRealizado", 0) or 0,
-        }
-        for item in data.get("ranking_sdr", [])
-    ]
-
-
-def extract_closer(data: dict) -> list:
-    return [
-        {
-            "nome": item.get("nome", "—"),
-            "show": item.get("showRealizado", 0) or 0,
-            "vendaValor": item.get("vendaFaturamento", 0) or 0,
-            "vendaQtd": item.get("vendaRealizado", 0) or 0,
-        }
-        for item in data.get("ranking_closer", [])
-    ]
 
 
 def dedupe_evento_closer(closer: list, evento: list) -> list:
@@ -156,19 +143,6 @@ def dedupe_evento_closer(closer: list, evento: list) -> list:
             negocios = max(0, negocios - (c.get("vendaQtd", 0) or 0))
         result.append({"nome": nome, "vendido": vendido, "negocios": negocios})
     return result
-
-
-def build_state(data: dict, ano: int, mes: int, sdr: list, closer: list, evento: list, keyaccount: list) -> dict:
-    updated_at = (data.get("funil") or {}).get("AtualizadoEm") or datetime.now(timezone.utc).isoformat()
-    period = f"{MESES_PT[mes]}/{ano} · mês inteiro"
-    return {
-        "updatedAt": updated_at,
-        "period": period,
-        "sdr": sdr,
-        "closer": closer,
-        "evento": evento,
-        "keyaccount": keyaccount,
-    }
 
 
 def extract_current_state(html: str) -> dict:
@@ -201,37 +175,44 @@ def main() -> int:
     now_sp = datetime.now(SP_TZ)
     ano, mes = now_sp.year, now_sp.month
 
-    try:
-        trigger_refresh()
-    except Exception as exc:  # noqa: BLE001
-        print(f"AVISO: não consegui disparar o recálculo do dashboard, lendo o último retrato disponível: {exc}", file=sys.stderr)
-
-    try:
-        data = fetch_dashboard(ano, mes)
-    except Exception as exc:  # noqa: BLE001
-        print(f"ERRO ao buscar dashboard: {exc}", file=sys.stderr)
-        return 1
-
     with open(HTML_PATH, "r", encoding="utf-8") as f:
         html = f.read()
 
-    sdr = extract_sdr(data)
-    closer = extract_closer(data)
+    current_state = extract_current_state(html)
+
+    try:
+        tudo = fetch_tudo(ano, mes)
+    except Exception as exc:  # noqa: BLE001
+        print(f"AVISO: falha ao buscar dados gerais (Closer/SDR/Key Account), mantendo os últimos valores: {exc}", file=sys.stderr)
+        tudo = None
+
+    if tudo is not None:
+        sdr = extract_sdr(tudo)
+        closer = extract_closer(tudo)
+        keyaccount = extract_key_account(tudo)
+        updated_at = tudo.get("atualizadoEm") or datetime.now(timezone.utc).isoformat()
+    else:
+        sdr = current_state.get("sdr", [])
+        closer = current_state.get("closer", [])
+        keyaccount = current_state.get("keyaccount", [])
+        updated_at = current_state.get("updatedAt") or datetime.now(timezone.utc).isoformat()
 
     try:
         evento_bruto = fetch_evento(ano, mes)
         evento = dedupe_evento_closer(closer, evento_bruto)
     except Exception as exc:  # noqa: BLE001
         print(f"AVISO: falha ao buscar dados de Eventos, mantendo os últimos valores: {exc}", file=sys.stderr)
-        evento = extract_current_state(html).get("evento", [])
+        evento = current_state.get("evento", [])
 
-    try:
-        keyaccount = fetch_key_account(ano, mes)
-    except Exception as exc:  # noqa: BLE001
-        print(f"AVISO: falha ao buscar dados de Key Account, mantendo os últimos valores: {exc}", file=sys.stderr)
-        keyaccount = extract_current_state(html).get("keyaccount", [])
-
-    state = build_state(data, ano, mes, sdr, closer, evento, keyaccount)
+    period = f"{MESES_PT[mes]}/{ano} · mês inteiro"
+    state = {
+        "updatedAt": updated_at,
+        "period": period,
+        "sdr": sdr,
+        "closer": closer,
+        "evento": evento,
+        "keyaccount": keyaccount,
+    }
 
     try:
         new_html = replace_state(html, state)
